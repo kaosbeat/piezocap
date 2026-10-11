@@ -1,0 +1,796 @@
+Gem Stereo and Gem Multi
+
+Revision A
+
+
+Bela, a part of Augmented Instruments Ltd
+
+Datasheet Version 1.0 — Revised 2026-08-04
+Check https://bela.io/gem-datasheet if an updated version of this document exists.
+
+
+
+
+Getting Started: for full assembly and getting started guide please visit: https://learn.bela.io/gem
+
+
+
+
+                                                     1
+Contents
+
+1   Overview                                                                                                       3
+    1.1   Datasheet Revision History . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     3
+    1.2   Features . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   3
+    1.3   Applications . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   4
+
+2 Electrical specifications                                                                                        5
+    2.1   Pinout . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   6
+    2.2   DC-Coupled Audio Input on the Gem Multi . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        8
+    2.3   Power consumption . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      9
+    2.4   Powering from an external Power Source . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       10
+
+3 Physical Specifications                                                                                          11
+    3.1   Technical Drawing and Dimensions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .       11
+    3.2   Weight . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   12
+    3.3   Assembly Drawings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .      13
+
+4 Manufacturer Information                                                                                         14
+    4.1   Part numbers . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   14
+    4.2   Packaging . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    15
+    4.3   Address . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    15
+
+5 Source Files and Licenses                                                                                        15
+    5.1   Using our boards in commercial products . . . . . . . . . . . . . . . . . . . . . . . . . . . . .        15
+    5.2   Bela Name and Logo . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .     16
+
+6 Warnings and Safety Information                                                                                  16
+    6.1   Warnings . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .   16
+    6.2   Instructions for Safe Use . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .    16
+
+7 Compliance and Conformity                                                                                        16
+
+8 Disclaimer                                                                                                       16
+
+9 Appendix                                                                                                         17
+
+
+
+
+Datasheet V. 1.0                                    2026-08-04                                           Page 2 of 17
+Bela                                         Gem Stereo & Gem Multi                                    Revision A
+
+
+
+1 Overview
+Gem Stereo and Gem Multi are audio and data acquisition boards designed for the PocketBeagle 2. When used
+in conjunction with the Bela software, they provide low latency, low jitter audio and sensor processing.
+Gem Stereo and Gem Multi are designed, manufactured and supported by Augmented Instruments Ltd; the Pock-
+etBeagle 2 is designed, manufactured and supported by the BeagleBoard.org Foundation.
+
+
+1.1          Datasheet Revision History
+This datasheet is version 1.0 of Rev A of Gem Stereo and Gem Multi.
+The latest datasheet is available at https://bela.io/gem-datasheet
+
+
+1.2          Features
+
+Table 1: Feature Comparison Table
+
+                               Gem Stereo                           Gem Multi
+ Audio Inputs                                               AC-coupled, line-in
+       Channels                2                                    10
+       ADC                     TLV320AIC3104                        TLV320AIC3106
+                                                                    TLV320ADC3140 (2×)
+       Sample Rate [kHz]                                           up to 96
+       Bit Depth [bit]                                             up to 24
+ Audio Outputs                               headphones (min. 1 Ω), differential line out
+       Channels                2                                    10 (DC-coupled)
+       DAC                     TLV320AIC3104                        TLV320AIC3106, ES9080Q
+       Sample Rate [kHz]                                           up to 96
+       Bit Depth [bit]                                             up to 24
+ Analog Inputs
+       Channels                                                          8
+       Codec                                                        ADS8166
+       Sample Rate [kHz]                              up to 250 across all channels
+       Bit Depth [bit]                                                   16
+ Digital GPIO                                                  16 (3.3 V logic)
+ Connectivity
+       USB                                       USB-C device port and USB-A host port1
+       I²C                                        via dedicated pins + Qwiic connector
+ Power                         5 V (can be battery powered)         5 V, has LiPo battery connector
+ Includes                      baseplate, spacers, screws           baseplate, spacers, screws
+                                                                    2 extension boards with 3.5 mm jacks2
+ Compatibility                               PocketBeagle 2 and PocketBeagle 2 Industrial
+  1
+      Supports Wi-Fi, Bluetooth or Ethernet peripherals, MIDI plug-and-play via both USB ports.
+  2
+      The extension boards have 4 stereo 3.5 mm jacks each, providing a standard interface for all audio channels.
+
+
+
+Datasheet V. 1.0                                   2026-08-04                                        Page 3 of 17
+Bela                                         Gem Stereo & Gem Multi                                        Revision A
+
+
+
+1.3        Applications
+The Bela systems are built to enable rapid prototyping and development for a variety of audio, low-latency, low-jitter
+applications, with connectivity and ease of use in mind. This includes, but is not limited to the following scenarios:
+
+
+Gem Stereo
+Compact, powerful, and easily embedded, Bela Gem Stereo is ideal for engineers, artists, educators, and product
+designers exploring real-time audio in small, mobile formats.
+
+       Digital musical instruments
+       Custom audio effects boxes and wearable devices where low power, small size, and high-quality audio are
+       essential.
+       Hearing aids and active noise cancellation applications that depend on real-time responsiveness and robust
+       signal processing.
+       Sound art and interactive installations.
+
+
+Gem Multi
+With 10 channels of high-resolution audio I/O, including 10 DC-coupled audio outputs, alongside generous analog
+and digital I/O, Bela Gem Multi is made for projects that push the boundaries of multichannel sound and control.
+
+       Spatial audio systems, from ambisonic soundfields to custom speaker arrays and dynamic multichannel
+       diffusion.
+       Haptic feedback systems with precise, low-latency control over vibrotactile actuators across many channels.
+       Microphone arrays for spatial recording, beamforming, or advanced environmental sensing.
+       Immersive home entertainment systems or electric vehicle sound designs, where every sound channel
+       needs precise, low-latency control.
+       An excellent platform for Eurorack experimentation, combining multiple audio I/O with configurable AC/DC
+       coupling, with rich analog and digital I/O for creating hardware interfaces and working with CV, gates, and
+       triggers.
+
+
+
+
+Datasheet V. 1.0                                    2026-08-04                                          Page 4 of 17
+Bela                                       Gem Stereo & Gem Multi                                    Revision A
+
+
+
+2 Electrical specifications
+The electric specifications of Gem Stereo and Gem Multi are derived from the on-board chips and from the host
+board, as listed in Table 2. Refer to their respective manufacturer’s documentation for absolute maximum ratings
+and electrical specifications.
+
+Table 2: Third party components
+
+                                               Bela Gem Stereo
+ Host board         BeagleBoard PocketBeagle 2 or PocketBeagle 2 Industrial
+ On-board chips     Texas Instruments TLV320AIC3104
+                    Texas Instruments ADS8166
+                    STMicroelectronics TSV524
+                    Microchip MIC5317
+                                                Bela Gem Multi
+ Host board         BeagleBoard PocketBeagle 2 or PocketBeagle 2 Industrial
+ On-board chips     Texas Instruments TLV320AIC3106
+                    Texas Instruments TLV320ADC3140
+                    Texas Instruments ADS8166
+                    ESS ES9080Q
+                    STMicroelectronics TSV524
+                    Microchip MIC5317
+                    onsemi MC33204
+                    Texas Instruments LM27761
+                    Microchip MIC5317
+
+
+
+
+Datasheet V. 1.0                                 2026-08-04                                        Page 5 of 17
+Bela                                      Gem Stereo & Gem Multi                                        Revision A
+
+
+
+2.1        Pinout
+Gem Stereo pinout is shown in Figure 1, Gem Multi pinout is shown in Figure 2. The Gem Multi extension boards
+for jack outputs are shown in 3. Triangles indicate pin 1 and direction to increment.
+
+                                                                                        ANALOG IN
+                                                                                         A0
+                                               P2 → Table 4                              A1
+                                                                                         A2
+                          LINE OUT                                       P1 → Table 3    A3
+                                                                                         A4
+                          GND                                                            A5
+                          LEFT−                                                          A6
+                          LEFT+                                                          A7
+                          RIGHT−                                                         GND
+                          RIGHT+                                                         REF
+
+
+
+
+                                                                             HEADPHONES
+                   LINE IN                                                    GND
+                    GND                                                       HPL
+                    LIL                                                       HPR
+                    LIR
+
+
+
+
+                                     JACK IN                    JACK OUT
+                                      T LIL                     T HPL
+                                      R1 LIR                    R1 HPR
+                                      R2 GND                    R2 GND
+                                      S NIC                     S NIC
+
+Figure 1: Bela Gem Stereo pinout
+
+
+                                                                                               ANALOG IN
+                                                                                            A0
+                                                                                            A1
+                                        P2 → Table 4                                        A2
+                   J8                                                          P1 → Table 3 A3
+                                                                                            A4
+                   GND                                                                      A5
+                   3.3V
+                   5V                                                              J10      A6
+                                                                                            A7
+                                                                                   GND      GND
+                                                                                   −5V      REF
+                                                                                   5V
+         AUDIO IN
+          MicBias MicBias                                                           AUDIO OUT
+          GND     GND                                                                   GND   GND
+          IN9+ IN9−                                                                     GND   OUT9
+          IN8+ IN8−                                                                     GND   OUT8
+          IN7+ IN7−                                                                     GND   OUT7
+          IN6+ IN6−                                                                     GND   OUT6
+          IN5+ IN5−                                                                     GND   OUT5
+          IN4+ IN4−                                                                     GND   OUT4
+          IN3+ IN3−                                                                     GND   OUT3
+          IN2+ IN2−                                                                     GND   OUT2
+          IN1+ IN1−                                                                     OUT1− OUT1+
+          IN0+ IN0−                                                                     OUT0− OUT0+
+                                                                                        HEADPHONES
+                          J9                                                            GND
+                          GND        JACK IN                   JACK OUT                 HPL
+                                                                                        HPR
+                          GND
+                          3.3V       T LIL                      T HPL
+                                     R1 LIR                     R1 HPR
+                                     R2 GND                     R2 GND
+                                     S NIC                      S NIC
+
+Figure 2: Bela Gem Multi pinout
+
+
+
+
+Datasheet V. 1.0                                  2026-08-04                                          Page 6 of 17
+Bela                                     Gem Stereo & Gem Multi                                   Revision A
+
+
+
+
+                                              MicBias
+                                              GND
+                                              GND
+
+
+
+                                                             GND
+                                                             GND
+           INPUT JACKS                                                              OUTPUT JACKS
+                                              IN9_AC    −5V                         T OUT8
+                                              IN8_AC    5V                          R OUT9
+                                                                                    S GND
+             T IN9_AC
+             R IN8_AC                         IN7_AC    OUT9                            T OUT8
+             S GND                            IN6_AC    OUT8                            R OUT9
+                                                                                        S GND
+             T IN7_AC
+             R IN6_AC                                   OUT7                        T OUT8
+                                              IN5_AC    OUT6                        R OUT9
+             S GND                            IN4_AC                                S GND
+             T IN4_AC
+             R IN5_AC                                   OUT5                        T OUT8
+                                              IN3_AC    OUT4
+             S GND                            IN2_AC                                R OUT9
+                                                                                    S GND
+             T IN2_AC
+             R IN3_AC                                   OUT3
+             S GND                                      OUT2
+
+Figure 3: Bela Gem Multi extension boards pinout
+
+
+Table 3: Sockets P1
+
+                                                    P1
+                            2×18 pin socket header on Gem Stereo and Gem Multi
+                        Even row                                              Odd row
+ Type                              Function       No.    No.       Function                        Type
+ I/O                                            P1.02   P1.01      VIN                             P
+ I/O                                            P1.04   P1.03      USB1.DRVVBUS                    P
+ O                             SPI ADC CNV      P1.06   P1.05
+                                                                   USB VBUS                        P
+ O                             SPI ADC SCK      P1.08   P1.07
+ I                            SPI ADC MISO      P1.10   P1.09      USB DN                          I/O
+ O                            SPI ADC MOSI      P1.12   P1.11      USB DP                          I/O
+ P                                    3.3 V     P1.14   P1.13      USB1.ID                         I/O
+ P                                     GND      P1.16   P1.15      USBGND                          P
+ P                                              P1.18   P1.17                                      P
+ I/O                                            P1.20   P1.19                                      I
+ P                                     GND      P1.22   P1.21      D0                              I/O
+ P                                      5V      P1.24   P1.23      D1                              I/O
+ I/O                               I²C SDA      P1.26   P1.25      D2                              I/O
+ O                                 I²C SCL      P1.28   P1.27      D3                              I/O
+ I/O                                    D4      P1.30   P1.29                                      I/O
+ I/O                                    D5      P1.32   P1.31                                      I/O
+ I/O                                    D6      P1.34   P1.33      AUD SDA                         I/O
+ O                                 AUD SCL      P1.36   P1.35                                      I/O
+
+
+
+
+Datasheet V. 1.0                                 2026-08-04                                      Page 7 of 17
+Bela                                          Gem Stereo & Gem Multi                                Revision A
+
+
+Table 4: Sockets P2
+
+                                                      P2
+                              2×18 pin socket header on Gem Stereo and Gem Multi
+                         Even row                                                 Odd row
+ Type                                   Function      No.       No.    Function                     Type
+ I/O                                      LED A     P2.02     P2.01    D7                           I/O
+ I/O                                      LED B     P2.04     P2.03    D8                           I/O
+ I/O                                     BUTTON     P2.06     P2.05    AUD DOUT                     O
+ I/O                      POWER LED DISABLE         P2.08     P2.07    AUD IN                       I
+ I/O                                 AUD WCLK       P2.10     P2.09    D9                           I/O
+ I                                      PWR BTN     P2.12     P2.11    AUD MCLK                     I/O
+ P                                      BAT.VIN     P2.14     P2.13    5V                           P
+ I/O                                 BAT.TEMP       P2.16     P2.15    GND                          P
+ I/O                                    ADC RST     P2.18     P2.17                                 I/O
+ I/O                                                P2.20     P2.19    AUD BCLK                     I/O
+ I/O                                                P2.22     P2.21    GND                          P
+ I/O                                                P2.24     P2.23    3.3V                         P
+ I                                                  P2.26     P2.25    D10                          I/O
+ I/O                                                P2.28     P2.27    D11                          I/O
+ I/O                                                P2.30     P2.29    D12                          I/O
+ I/O                                                P2.32     P2.31                                 O
+ I/O                                                P2.34     P2.33    D14                          I/O
+ I/O                                        D13     P2.36     P2.35    D15                          I/O
+
+
+
+2.2         DC-Coupled Audio Input on the Gem Multi
+On the Gem Multi systems, audio inputs 2-9 are DC-coupled. Typical signals should be cantered around 1.375 V
+with an amplitude of ±1 V. input must not exceed the save range of −0.3 V to 3.6 V. Additional AC-coupling
+circuitry is necessary when connecting them to signals that have a DC component referenced to ground. See
+Table 5 for a schematic view of the required circuitry of each case.
+In order to connect signals to the board’s inputs with appropriate AC-coupling, the following is required for a
+single-ended AC-coupled signal:
+
+        A 1 µF capacitor in series with the signal going into the + pin.
+        A 1 µF capacitor to ground from the − pin.
+
+For a differential AC-coupled signal:
+
+        A 1 µF capacitor in series with the signal going into the + pin.
+        A 1 µF capacitor in series with the signal going into the − pin.
+
+For a single-ended DC-coupled signal:
+
+        Connect the signal directly to the + pin.
+        Connect the − pin to ground.
+
+For a differential DC-coupled signal:
+
+        Connect the + signal directly to the + pin.
+
+
+Datasheet V. 1.0                                      2026-08-04                                  Page 8 of 17
+Bela                                         Gem Stereo & Gem Multi                                        Revision A
+
+
+       Connect the − signal directly to the − pin.
+
+Table 5: Schematic view of circuits required on input connection for channels 2-9 of the Gem Multi
+               Coupling
+                             AC                                           DC
+ Signal
+
+
+
+
+ single ended
+
+
+
+ differential
+
+
+The input extension board with stereo phone jacks already provides the single-ended AC-coupling circuitry above
+for both the jack and pin inputs, and so it can be used to connect such signals without external components.
+
+
+Caveats
+Some sources may appear to have an AC-coupled output because they have a series DC-blocking capacitor.
+However, if they also have a resistor to ground (or other DC reference) after the capacitor, they will still need the
+series capacitor prescribed above, otherwise this will result in a DC offset on the ADC’s output.
+If the ADC’s negative input is left floating while a single-ended signal is connected to the positive input, the ADC’s
+output may seem to work, however it will be more noisy and sensitive to external-interference. For this reason, the
+negative input should always be properly connected as described above.
+
+
+2.3        Power consumption
+See Table 6 for details on power consumption, measured when powering the PocketBeagle 2 and the Gem Stereo
+or Gem Multi with 5 V via USB-C.
+
+Table 6: Power consumption
+
+                          Unit     Value     Condition
+  PB2 only                 W       1.21      idle
+  PB2 only                 W       2.00      4 core load
+  PB2 + Gem Stereo         W       1.21      idle
+  PB2 + Gem Stereo         W       1.32      audio + 1 core load
+  PB2 + Gem Stereo         W       2.15      audio + 4 core load
+  PB2 + Gem Multi          W       1.32      idle
+  PB2 + Gem Multi          W       1.95      audio + 1 core load
+  PB2 + Gem Multi          W       2.78      audio + 4 core load
+
+
+
+
+Datasheet V. 1.0                                     2026-08-04                                         Page 9 of 17
+Bela                                           Gem Stereo & Gem Multi                                         Revision A
+
+
+
+2.4         Powering from an external Power Source
+The PocketBeagle 2 uses three ideal diodes (LM73100) in its power path to automatically select one of three
+available power sources, as shown in the simplified circuit, Figure 4.
+
+
+
+
+Figure 4: PocketBeagle 2 power path
+
+
+The voltage inputs are:
+
+       USB_5V is available on P1.07 and is also connected to the USB-C port’s 5 V pin. Valid voltages are between
+       3.8 V and 5.5 V.
+       VIN_5V is available on P1.01. Valid voltages are between 3.8 V and 5.5 V.
+       VBAT is available on P2.14. Valid voltages are between 3.2 V and 4.6 V. It is turned off if any of the others
+       are present.
+
+VSYS is a voltage output available on all pins labelled 5V on the Gem boards. An external power source should
+not be connected to it directly. External power sources can be added to the on-board pool of available, mutually
+exclusively, power sources if connected to VSYS via a diode.
+In general, the ideal diode network into VSYS selects the power source with the highest voltage and connects it to
+VSYS. Each ideal diode has voltage thresholds with hysteresis. A battery charger (BQ21040) is connected to VBAT
+and can recharge a single-cell Li-Ion or Li-Polymer battery at up to 540 mA when USB_5V is available.1 A JST PH
+series-compatible connector with GND and VBAT is present on the Bela Gem Multi board.
+To power the board when a USB-C power source is not available, VBAT should be used for LiPo cells and VIN_5V
+should be used for any other power source, except as noted below.
+
+REV A4 and below
+On Bela Gem Stereo and Multi boards version A4 and below, the USB-A host port is powered directly from USB_5V.
+If the USB host port needs to be functional when USB-C power is not available, then an external 5 V power source
+should use USB_5V via a diode. The diode ensures that If USB-C and the external power source are both active
+at the same time they are not short-circuited. The diode should have a small enough forward voltage to ensure
+that the voltage at USB_5V remains above 4.45 V as per the USB specs. If USB-C power and the external power
+supply will never be present at the same time, the diode can be bypassed.
+
+REV A5 and above
+On Bela Gem Stereo and Multi boards version A5 and above, the USB-A host port is powered from VSYS. As such,
+any voltage in the voltage in the valid range applied via the USB-C cable, USB_5V or VIN_5V will automatically power
+the USB-A port.
+
+
+
+
+     1 See https://docs.beagle.cc/boards/pocketbeagle-2/03-design-and-specifications.html and the PocketBeagle 2 schematic
+
+for full details.
+
+
+Datasheet V. 1.0                                      2026-08-04                                           Page 10 of 17
+Bela                                   Gem Stereo & Gem Multi            Revision A
+
+
+
+3 Physical Specifications
+3.1        Technical Drawing and Dimensions
+
+                                                 58.12
+
+
+                     22.74
+
+
+
+
+                                                                9
+                                             54.76
+
+
+
+
+                                                                38.1
+                             44.6
+
+
+
+
+                                              48.26
+
+Figure 5: Bela Gem Stereo dimensions
+
+
+
+
+Datasheet V. 1.0                            2026-08-04                 Page 11 of 17
+Bela                                     Gem Stereo & Gem Multi                                Revision A
+
+
+
+
+                                                                                     12.01
+                    32.87
+
+
+
+
+                                                                              9
+                                                    48.5
+
+
+
+
+                                                                              59.5
+                    70.73
+
+
+
+
+                                                   58.09
+
+Figure 6: Bela Gem Multi dimensions (with audio extension boards installed)
+
+
+3.2        Weight
+Gem Stereo: 35 g
+Gem Multi: 50 g
+
+
+
+
+Datasheet V. 1.0                               2026-08-04                                    Page 12 of 17
+Bela                                       Gem Stereo & Gem Multi                                 Revision A
+
+
+
+3.3        Assembly Drawings
+Insert the PocketBeagle 2 securely, then assemble your system using a Philips screwdriver. For the Gem Stereo
+assembly see Figure 7 and the parts list in Table 7.
+
+                   1
+
+
+                                                                                           3
+
+
+
+
+                   4
+
+
+
+
+                              2                                            5
+
+
+Figure 7: Bela Gem Stereo Assembly
+
+
+Table 7: Gem Stereo parts list
+
+ Item     Quantity     Description
+ 1            1        main PCB
+ 2            1        baseplate
+ 3            8        M3 4 mm screw
+ 4            4        M3 9 mm spacer
+ 5            1        PocketBeagle 2 (not included)
+
+
+For the Gem Multi assembly see Figure 8 and the parts list in Table 8.
+
+
+
+
+Datasheet V. 1.0                                  2026-08-04                                    Page 13 of 17
+Bela                                           Gem Stereo & Gem Multi                             Revision A
+
+
+
+                                                                                              3
+
+
+                                       8
+
+            2
+
+
+
+
+            5
+                                                                                              1
+
+
+
+
+            6
+
+
+
+
+                                                                         4
+                                   7
+
+
+
+Figure 8: Bela Gem Multi assembly
+
+
+Table 8: Gem Multi parts list
+
+ Item       Quantity      Description
+ 1              1         main PCB
+ 2              1         audio input extension board with TRS1 jacks
+ 3              1         audio output extension board with TRS1 jacks
+ 4              1         PocketBeagle 2 (not included)
+ 5              4         M3 12 mm spacer
+ 6              4         M3 9 mm spacer
+ 7              1         baseplate
+ 8              8         M3 4 mm screw
+  1
+      Tip, Ring, Sleeve — a jack with three electrical contacts.
+
+
+
+4 Manufacturer Information
+4.1          Part numbers
+Table 9 lists the manufacturer number and the Global Trade Item Number (formerly known as European Article
+Number) for both Gem variants.
+
+
+Datasheet V. 1.0                                      2026-08-04                             Page 14 of 17
+Bela                                           Gem Stereo & Gem Multi                                              Revision A
+
+
+Table 9: Manufacturer Numbers
+
+ Name                    Manufacturer Number                                                           GTIN
+ Bela Gem Stereo         160801-GEM-STEREO                                                             5060821690281
+ Bela Gem Multi          160802-GEM-MULTI                                                              5060821690298
+
+
+
+4.2        Packaging
+Gem Stereo and Gem Multi come in plastic-free retail packaging made from cardboard. Package dimensions are
+listed in Table 10. For OEM orders and other packaging requirements contact the manufacturer.
+
+Table 10: Packaging Dimensions [mm]
+
+ Product                                                                                   Width      Height         Depth
+ Bela Gem Stereo                                                                              110             30         80
+ Bela Gem Multi                                                                               120             40         90
+
+
+
+
+4.3        Address
+Augmented Instruments Ltd (trading as Bela)
+327 Mile End Road CS300
+London E1 4NS
+United Kingdom
+info@bela.io
+
+
+
+5 Source Files and Licenses
+Source files can be found here: https://github.com/BelaPlatform/bela-hardware/tree/master
+The Gem Stereo and Gem Multi hardware designs are licensed under a Creative Commons Attribution Sharealike
+4.0 license (or CC-BY-SA), meaning that you can freely use these for your own projects provided you supply
+attribution and a link to the source files, and release your own design files under the same license.2
+The Bela “core code” is distributed under LGPL, the GNU Lesser General Public License (LGPL 3.0), available
+here: https://www.gnu.org/licenses/lgpl-3.0.txt.
+The Bela IDE is licensed under GPL, the GNU General Public License, available here: https://www.gnu.org/
+licenses/gpl-3.0.en.html
+This datasheet and accompanying documentation is available under a Creative Commons Attribution-ShareAlike
+4.0 International (CC BY-SA 4.0) License, meaning it can be freely reused and remixed with attribution, provided
+modifications remain open source.
+
+
+5.1        Using our boards in commercial products
+Any boards bought from us or one of our official resellers can be resold inside a commercial product and treated
+like any other off-the-shelf electronic component. We offer discounts for bulk orders of our boards for commercial
+use; please email info@bela.io to discuss your needs.
+There are license restrictions on the use and modification of our hardware and software. Your own custom ap-
+plication code running inside the Bela environment should be dynamically linked to the Bela core code in order to
+   2 Read more about CC-BY-SA on the Creative Commons site https://creativecommons.org/licenses/by-sa/4.0/.
+
+
+
+
+Datasheet V. 1.0                                     2026-08-04                                               Page 15 of 17
+Bela                                       Gem Stereo & Gem Multi                                     Revision A
+
+
+respect the LGPL license. If you make any modifications to the core Bela Gem Stereo and Gem Multi hardware or
+software, those changes need to be released under the same open source terms once your product is released.
+If you would like to keep changes made to the core code or hardware closed source, please email info@bela.io to
+discuss a commercial license.
+There are some restrictions on using the trademarked Bela name and logo in your product, which means that your
+customers can not be given access to the Bela branded IDE through your product without our prior agreement.
+
+
+5.2        Bela Name and Logo
+Bela names and logos are copyright Augmented Instruments Ltd. Any designs that you release or produce should
+not use the Bela name and logo, whether modified or exact copies, without permission.
+
+
+
+6 Warnings and Safety Information
+6.1        Warnings
+       Compatibility: these products are designed exclusively for use with the PocketBeagle 2 and PocketBeagle
+       2 Industrial single-board computers by the BeagleBoard.org Foundation.
+       Power: use only a regulated 5 V DC supply via USB-C or through the socket headers as specified in this
+       datasheet.
+       Operation: use only on a dry, non-conductive surface. Avoid contact with conductive materials, liquids, or
+       extreme temperatures while powered. Observe the absolute maximum ratings in Table 2.
+       Handling: it is recommended to disconnect all power before connecting or removing cables, sensors, or
+       accessories. Do not solder, assemble, or modify the board while it is powered.
+       Assembly: when stacking boards or mounting in an enclosure, use the provided spacers and screws to
+       prevent mechanical stress or short circuits.
+       Responsibility: users are responsible for ensuring that connected circuits and accessories remain within
+       the safe voltage and current ratings specified in this datasheet.
+
+
+6.2        Instructions for Safe Use
+       Handle the board by the edges; avoid touching connectors or ICs when powered.
+       Keep away from moisture, dust, and strong vibrations.
+       Do not operate in exposed or damp conditions.
+
+
+
+7 Compliance and Conformity
+Gem Stereo and Gem Multi are compliant to RoHS and REACH directives and conform to CE and UKCA regulations.
+Declaration of conformity are linked on product pages.
+
+
+
+8 Disclaimer
+All trademarks, logos, and brand names including, but not limited to BeagleBone, BeagleBoard, PocketBeagle,
+KiCad, and Texas Instruments are the property of their respective owners. All company, product and service
+names used in this datasheet are for identification purposes only. The use of these names, trademarks, and
+brands does not imply affiliation or endorsement. All information in this datasheet is subject to change without
+notice.
+
+
+
+Datasheet V. 1.0                                  2026-08-04                                       Page 16 of 17
+Bela                                    Gem Stereo & Gem Multi     Revision A
+
+
+
+9 Appendix
+Complete schematic sheets for Gem Stereo and Gem Multi.
+
+
+
+
+Datasheet V. 1.0                              2026-08-04         Page 17 of 17
+
