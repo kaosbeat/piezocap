@@ -4,12 +4,20 @@
 Controls the PiezoCap effect chain on the Bela Gem Multi over MIDI and
 displays the 8 live envelopes (CC 100-107) and note gates (notes 60-67).
 
+Pages:
+  global   master volume / sustain / growl depth / active channels
+  channel  per channel: envelope gain + the 9 FX slots (enable/disable)
+  fx       per-FX parameter page (enter on an FX slot)
+
 Keys:
-  up/down            move between sliders
-  left/right         adjust the focused slider
-  shift+left/right   coarse step
-  1-8                select channel
-  q / esc            quit
+  g               global page
+  1-8             channel page
+  up/down         move focus
+  left/right      adjust slider / toggle FX
+  shift+left/right coarse step (sliders)
+  enter           open the focused FX's parameter page
+  esc / backspace back (fx -> channel -> global)
+  q               quit
 """
 from __future__ import annotations
 
@@ -27,32 +35,65 @@ except Exception:  # pragma: no cover
 # MIDI map — mirrors src/midi_map.hpp
 # ---------------------------------------------------------------------------
 NUM_CHANNELS = 8
-CC_MASTER_VOLUME = 7
-CC_SUSTAIN = 88
-CC_GROWL_DEPTH = 91
+DEFAULT_NUM_CHANNELS = 4
+
+# Globals (top of the inbound map)
+CC_MASTER_VOLUME = 120
+CC_SUSTAIN = 121
+CC_GROWL_DEPTH = 122
+CC_ACTIVE_CHANNELS = 123
+
+# Outbound (Bela -> DAW over the USB-C device port)
 CC_OUT_ENVELOPE_BASE = 100
 NOTE_GATE_BASE = 60
 
-# (state key, label, cc offset within the 16-CC channel block)
-PARAMS = [
-    ("env_gain", "Envelope Gain", 0),
-    ("lp_freq", "LP Freq", 1),
-    ("lp_res", "LP Res", 2),
-    ("dist_drive", "Dist Drive", 3),
-    ("bitcrush", "Bitcrush", 4),
-    ("bypass", "Bypass", 5),
-    ("pitch_depth", "Pitch Depth", 6),
-]
 
-BYPASS_BITS = ["HPF", "PITCH", "FORMANT", "DIST", "CRUSH", "AM"]
+def channel_base(i: int) -> int:
+    return 15 * i
+
+
+# Per-channel parameter CCs (offset 0-12)
+PARAMS = {
+    "env_gain": ("Envelope Gain", 0),
+    "lp_freq": ("LP Freq", 1),
+    "lp_res": ("LP Res", 2),
+    "pitch_depth": ("Pitch Depth", 3),
+    "dist_drive": ("Dist Drive", 4),
+    "bitcrush": ("Bitcrush", 5),
+    "gran_density": ("Gran Density", 6),
+    "gran_size": ("Gran Size", 7),
+    "delay_time": ("Delay Time", 8),
+    "delay_fb": ("Delay Feedback", 9),
+    "delay_wet": ("Delay Wet", 10),
+    "reverb_decay": ("Reverb Decay", 11),
+    "reverb_wet": ("Reverb Wet", 12),
+}
+KEY_OFFSET = {k: off for k, (_label, off) in PARAMS.items()}
+KEY_OFFSET["bypass_low"] = 13
+KEY_OFFSET["bypass_high"] = 14
+OFFSET_TO_KEY = {off: k for k, off in KEY_OFFSET.items()}
+
+# FX slots: (name, bypass bit 0-8, parameter keys)
+FXS = [
+    ("HPF", 0, []),
+    ("Pitch", 1, ["pitch_depth"]),
+    ("Formant", 2, ["lp_freq", "lp_res"]),
+    ("Dist", 3, ["dist_drive"]),
+    ("Crush", 4, ["bitcrush"]),
+    ("AM", 5, []),
+    ("Delay", 6, ["delay_time", "delay_fb", "delay_wet"]),
+    ("Reverb", 7, ["reverb_decay", "reverb_wet"]),
+    ("Granular", 8, ["gran_density", "gran_size"]),
+]
 
 GLOBAL_CCS = {
     "master_volume": CC_MASTER_VOLUME,
     "sustain": CC_SUSTAIN,
     "growl_depth": CC_GROWL_DEPTH,
+    "active_channels": CC_ACTIVE_CHANNELS,
 }
 
-HELP = "up/down move  left/right adjust  shift+left/right coarse  1-8 channel  q quit"
+HELP = "g global  1-8 channel  up/down move  left/right adjust/toggle  enter FX page  esc back  q quit"
 
 PALETTE = [
     ("header", "white", "dark blue", "bold"),
@@ -60,13 +101,26 @@ PALETTE = [
 ]
 
 
-def cc_channel(i: int, offset: int) -> int:
-    return 16 * i + offset
+# ---------------------------------------------------------------------------
+# Bypass mask helpers (9-bit mask; bits 0-6 ride bypass_low, bits 7-8 ride
+# bypass_high)
+# ---------------------------------------------------------------------------
+def bypass_mask(ch: dict) -> int:
+    return ch["bypass_low"] | (ch["bypass_high"] << 7)
 
 
-def fmt_bypass(v: int) -> str:
-    bits = "".join(BYPASS_BITS[i][0] for i in range(len(BYPASS_BITS)) if v & (1 << i))
-    return f"{v:3d} {bits}"
+def fx_active(ch: dict, bit: int) -> bool:
+    return not (bypass_mask(ch) & (1 << bit))
+
+
+def set_fx_active(ch: dict, bit: int, active: bool) -> None:
+    m = bypass_mask(ch)
+    if active:
+        m &= ~(1 << bit)
+    else:
+        m |= 1 << bit
+    ch["bypass_low"] = m & 0x7F
+    ch["bypass_high"] = (m >> 7) & 3
 
 
 # ---------------------------------------------------------------------------
@@ -79,18 +133,28 @@ class State:
         self.master_volume = 70
         self.sustain = 0
         self.growl_depth = 90
-        self.channels = [
-            {
-                "env_gain": 0,
-                "lp_freq": 64,
-                "lp_res": 50,
-                "dist_drive": 40,
-                "bitcrush": 32,
-                "bypass": 0,
-                "pitch_depth": 40,
-            }
-            for _ in range(NUM_CHANNELS)
-        ]
+        self.active_channels = DEFAULT_NUM_CHANNELS
+        # Defaults: ch0 = formant only (bypass low 123 / high 3), ch1-7 all
+        # bypassed (bypass low 127 / high 3)
+        base = {
+            "env_gain": 64,
+            "lp_freq": 59,
+            "lp_res": 34,
+            "pitch_depth": 0,
+            "dist_drive": 0,
+            "bitcrush": 0,
+            "gran_density": 64,
+            "gran_size": 64,
+            "delay_time": 50,
+            "delay_fb": 64,
+            "delay_wet": 64,
+            "reverb_decay": 70,
+            "reverb_wet": 64,
+            "bypass_low": 127,
+            "bypass_high": 3,
+        }
+        ch0 = dict(base, bypass_low=123)
+        self.channels = [ch0] + [dict(base) for _ in range(NUM_CHANNELS - 1)]
         self.env = [0] * NUM_CHANNELS
         self.gate = [False] * NUM_CHANNELS
 
@@ -193,13 +257,13 @@ class MidiBridge:
                 s.sustain = d2
             elif d1 == CC_GROWL_DEPTH:
                 s.growl_depth = d2
-            else:
-                for i in range(NUM_CHANNELS):
-                    base = cc_channel(i, 0)
-                    if base <= d1 < base + 7:
-                        key = PARAMS[d1 - base][0]
-                        s.channels[i][key] = d2
-                        break
+            elif d1 == CC_ACTIVE_CHANNELS:
+                s.active_channels = max(1, min(NUM_CHANNELS, d2))
+            elif d1 < 15 * NUM_CHANNELS:
+                i = d1 // 15
+                off = d1 % 15
+                key = OFFSET_TO_KEY[off]
+                s.channels[i][key] = d2
         self.wake()
 
     def send_cc(self, cc: int, value: int) -> None:
@@ -217,30 +281,53 @@ class MidiBridge:
 # ---------------------------------------------------------------------------
 # Widgets
 # ---------------------------------------------------------------------------
-class Slider(urwid.Text):
+class SliderRow(urwid.Text):
     BAR_W = 32
 
-    def __init__(self, label: str, get, set_, fmt, step: int = 1, big: int = 10) -> None:
+    def __init__(self, label: str, get, set_, max_v: int = 127) -> None:
         super().__init__("")
         self.label = label
         self._get = get
         self._set = set_
-        self._fmt = fmt
-        self.step = step
-        self.big = big
+        self.max_v = max_v
+        self.step = 1
+        self.big = 10
         self.focused = False
         self.refresh()
 
     def refresh(self) -> None:
-        v = max(0, min(127, int(self._get())))
-        fill = int(round(v / 127 * self.BAR_W))
+        v = max(0, min(self.max_v, int(self._get())))
+        fill = int(round(v / self.max_v * self.BAR_W)) if self.max_v else 0
         bar = "#" * fill + "." * (self.BAR_W - fill)
         marker = ">" if self.focused else " "
-        self.set_text(f"{marker} {self.label:<16} [{bar}] {self._fmt(v)}")
+        self.set_text(f"{marker} {self.label:<18} [{bar}] {v:>3}")
 
     def adjust(self, delta: int) -> None:
-        v = max(0, min(127, int(self._get()) + delta))
+        v = max(0, min(self.max_v, int(self._get()) + delta))
         self._set(v)
+        self.refresh()
+
+
+class ToggleRow(urwid.Text):
+    def __init__(self, label: str, get_active, set_active, has_params: bool, fx_idx: int) -> None:
+        super().__init__("")
+        self.label = label
+        self._get = get_active
+        self._set = set_active
+        self.has_params = has_params
+        self.fx_idx = fx_idx
+        self.focused = False
+        self.refresh()
+
+    def refresh(self) -> None:
+        on = self._get()
+        state = "ON " if on else "off"
+        drill = ">" if self.has_params else " "
+        marker = ">" if self.focused else " "
+        self.set_text(f"{marker} {self.label:<12} [{state}] {drill}")
+
+    def adjust(self, _delta: int) -> None:
+        self._set(not self._get())
         self.refresh()
 
 
@@ -255,14 +342,19 @@ def text_row(text: str, style: str = "header") -> urwid.AttrMap:
 class App:
     def __init__(self) -> None:
         self.state = State()
+        self.page = "global"
         self.channel = 0
+        self.fx_idx = 0
         self._wake_rd, self._wake_wr = os.pipe()
         self.bridge = MidiBridge(self.state, self._wake)
-        self.live_texts = None
-        self.live_rows = None
-        self.body = None
-        self.all_sliders = []
+        self.live_texts = [urwid.Text("") for _ in range(NUM_CHANNELS)]
+        self.live_rows = [urwid.Filler(t) for t in self.live_texts]
+        self.rows = []
         self.focus_idx = 0
+        self.header = None
+        self.page_header = None
+        self.page_box = None
+        self.body = None
         self._build_body()
         self.mainloop = urwid.MainLoop(self.body, PALETTE, unhandled_input=self.on_key)
         self.mainloop.watch_file(self._wake_rd, self._on_wake)
@@ -283,18 +375,25 @@ class App:
 
     # -- state setters (UI -> MIDI) ------------------------------------------
     def _set_global(self, key: str, v: int) -> None:
+        if key == "active_channels":
+            v = max(1, min(NUM_CHANNELS, v))
         setattr(self.state, key, v)
         self.bridge.send_cc(GLOBAL_CCS[key], v)
 
     def _set_channel_param(self, i: int, key: str, v: int) -> None:
         self.state.channels[i][key] = v
-        offset = next(o for k, _label, o in PARAMS if k == key)
-        self.bridge.send_cc(cc_channel(i, offset), v)
+        self.bridge.send_cc(channel_base(i) + KEY_OFFSET[key], v)
+
+    def _set_fx(self, i: int, bit: int, active: bool) -> None:
+        ch = self.state.channels[i]
+        set_fx_active(ch, bit, active)
+        self.bridge.send_cc(channel_base(i) + KEY_OFFSET["bypass_low"], ch["bypass_low"])
+        self.bridge.send_cc(channel_base(i) + KEY_OFFSET["bypass_high"], ch["bypass_high"])
 
     def _apply_focus(self) -> None:
-        for i, s in enumerate(self.all_sliders):
-            s.focused = (i == self.focus_idx)
-            s.refresh()
+        for i, r in enumerate(self.rows):
+            r.focused = (i == self.focus_idx)
+            r.refresh()
 
     # -- body construction ----------------------------------------------------
     def _status_line(self) -> str:
@@ -305,105 +404,116 @@ class App:
             )
         return f"PIEZOCAP CONTROL  OFFLINE  ({self.bridge.error})  — sliders not transmitted"
 
-    def _make_slider(self, label, key, getter, setter, fmt):
-        return Slider(label, getter, setter, fmt)
-
     def _build_body(self) -> None:
         self.header = text_row(self._status_line())
-
         st = self.state
-        self.global_sliders = [
-            self._make_slider(
-                "Master Volume", "master_volume",
-                lambda: st.master_volume,
-                lambda v: self._set_global("master_volume", v),
-                str,
-            ),
-            self._make_slider(
-                "Sustain", "sustain",
-                lambda: st.sustain,
-                lambda v: self._set_global("sustain", v),
-                str,
-            ),
-            self._make_slider(
-                "Growl Depth", "growl_depth",
-                lambda: st.growl_depth,
-                lambda v: self._set_global("growl_depth", v),
-                str,
-            ),
-        ]
-        global_box = urwid.Pile([urwid.Filler(s) for s in self.global_sliders])
-
-        ch = self.state.channels[self.channel]
-        self.channel_sliders = []
-        for key, label, _off in PARAMS:
-            self.channel_sliders.append(self._make_slider(
-                label, key,
-                lambda key=key: ch[key],
-                lambda v, key=key: self._set_channel_param(self.channel, key, v),
-                fmt_bypass if key == "bypass" else str,
-            ))
-        channel_box = urwid.Pile([urwid.Filler(s) for s in self.channel_sliders])
-        channel_header = text_row(f" CHANNEL {self.channel + 1} of {NUM_CHANNELS} ")
-
-        self.all_sliders = self.global_sliders + self.channel_sliders
-        self._apply_focus()
-
-        self.live_texts = [urwid.Text("") for _ in range(NUM_CHANNELS)]
-        self.live_rows = [urwid.Filler(t) for t in self.live_texts]
+        if self.page == "global":
+            self.page_header = text_row(" GLOBAL ")
+            self.rows = [
+                SliderRow("Master Volume", lambda: st.master_volume,
+                          lambda v: self._set_global("master_volume", v)),
+                SliderRow("Sustain", lambda: st.sustain,
+                          lambda v: self._set_global("sustain", v)),
+                SliderRow("Growl Depth", lambda: st.growl_depth,
+                          lambda v: self._set_global("growl_depth", v)),
+                SliderRow("Active Channels", lambda: st.active_channels,
+                          lambda v: self._set_global("active_channels", v), max_v=8),
+            ]
+        elif self.page == "channel":
+            i = self.channel
+            ch = st.channels[i]
+            self.page_header = text_row(f" CHANNEL {i + 1} of {NUM_CHANNELS}  (enter = FX params) ")
+            self.rows = [
+                SliderRow("Envelope Gain", lambda: ch["env_gain"],
+                          lambda v: self._set_channel_param(i, "env_gain", v)),
+            ]
+            for idx, (name, bit, params) in enumerate(FXS):
+                self.rows.append(ToggleRow(
+                    name,
+                    lambda bit=bit: fx_active(ch, bit),
+                    lambda a, bit=bit: self._set_fx(i, bit, a),
+                    bool(params), idx,
+                ))
+        elif self.page == "fx":
+            name, _bit, params = FXS[self.fx_idx]
+            ch = st.channels[self.channel]
+            self.page_header = text_row(f" CHANNEL {self.channel + 1} / {name} ")
+            self.rows = [
+                SliderRow(PARAMS[k][0], lambda k=k: ch[k],
+                          lambda v, k=k: self._set_channel_param(self.channel, k, v))
+                for k in params
+            ]
+        self.page_box = urwid.Pile([urwid.Filler(r) for r in self.rows])
         live_box = urwid.Pile(self.live_rows)
-
         footer = text_row(HELP, "footer")
-
         self.body = urwid.Pile([
             self.header,
-            text_row(" GLOBAL "),
-            global_box,
-            channel_header,
-            channel_box,
+            self.page_header,
+            self.page_box,
             text_row(" LIVE ENVELOPES (CC 100-107 / notes 60-67) "),
             live_box,
             footer,
         ])
+        self._apply_focus()
         self.refresh_live()
 
-    def refresh_live(self) -> None:
-        if self.live_texts is None:
-            return
-        bar_w = 32
-        for i in range(NUM_CHANNELS):
-            v = self.state.env[i]
-            fill = int(round(v / 127 * bar_w))
-            bar = "#" * fill + "." * (bar_w - fill)
-            gate = "GATE" if self.state.gate[i] else "    "
-            self.live_texts[i].set_text(f"CH{i + 1:<3} [{bar}] {v:3d}  {gate}")
-
-    def select_channel(self, i: int) -> None:
-        self.channel = i
+    def go(self, page: str, channel=None, fx_idx: int = 0) -> None:
+        self.page = page
+        if channel is not None:
+            self.channel = channel
+        self.fx_idx = fx_idx
+        self.focus_idx = 0
         self._build_body()
         self.mainloop.widget = self.body
+
+    def refresh_live(self) -> None:
+        bar_w = 32
+        for i in range(NUM_CHANNELS):
+            if i < self.state.active_channels:
+                v = self.state.env[i]
+                fill = int(round(v / 127 * bar_w))
+                bar = "#" * fill + "." * (bar_w - fill)
+                gate = "GATE" if self.state.gate[i] else "    "
+                self.live_texts[i].set_text(f"CH{i + 1:<3} [{bar}] {v:3d}  {gate}")
+            else:
+                self.live_texts[i].set_text(f"CH{i + 1:<3} [{'.' * bar_w}]    (inactive)")
 
     # -- keys ----------------------------------------------------------------
     def on_key(self, key):
         if not isinstance(key, str):
             return None
-        if key in ("q", "esc"):
+        if key == "q":
             self.quit()
             return True
-        if key.isdigit() and 1 <= int(key) <= NUM_CHANNELS:
-            self.select_channel(int(key) - 1)
+        if key == "g":
+            self.go("global")
             return True
-        n = len(self.all_sliders)
+        if key.isdigit() and 1 <= int(key) <= NUM_CHANNELS:
+            self.go("channel", channel=int(key) - 1)
+            return True
+        if key in ("esc", "backspace"):
+            if self.page == "fx":
+                self.go("channel")
+            elif self.page == "channel":
+                self.go("global")
+            return True
+        n = len(self.rows)
         if key in ("up", "down") and n:
             self.focus_idx = (self.focus_idx - 1) % n if key == "up" else (self.focus_idx + 1) % n
             self._apply_focus()
             return True
         if n:
-            s = self.all_sliders[self.focus_idx]
+            r = self.rows[self.focus_idx]
             if key in ("left", "right", "shift left", "shift right"):
-                step = s.step if key in ("left", "right") else s.big
-                delta = -step if key in ("left", "shift left") else step
-                s.adjust(delta)
+                if isinstance(r, SliderRow):
+                    step = r.step if key in ("left", "right") else r.big
+                    delta = -step if key in ("left", "shift left") else step
+                    r.adjust(delta)
+                else:
+                    r.adjust(0)
+                return True
+            if key == "enter" and isinstance(r, ToggleRow) and r.has_params:
+                self.go("fx", channel=self.channel, fx_idx=r.fx_idx)
                 return True
         return None
 

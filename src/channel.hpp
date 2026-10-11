@@ -4,11 +4,15 @@
 #include "fx/distortion.hpp"
 #include "fx/bitcrusher.hpp"
 #include "fx/shifter.hpp"
+#include "fx/delay.hpp"
+#include "fx/reverb.hpp"
+#include "fx/granular.hpp"
 #include "midi_map.hpp"
 
 // One piezo channel: input -> gain/AGC -> HPF -> envelope -> pitch -> formant
-// LP -> distortion -> bitcrusher -> AM -> (out). The envelope also drives the
-// MIDI CC, note gate, and CV output (handled in main.cpp).
+// LP -> distortion -> bitcrusher -> AM -> granular -> delay -> reverb -> (out).
+// The envelope also drives the MIDI CC, note gate, and CV output (handled in
+// main.cpp). The space FX (granular/delay/reverb) each own a dry/wet mix.
 struct Channel {
     double sampleRate = 48000.0;
     double gain = 1.0;        // input gain (AGC target)
@@ -18,13 +22,17 @@ struct Channel {
     double lpRes = 5.0;       // formant LP resonance (Q)
     double amDepth = 0.5;     // AM depth (envelope)
 
-    // bypass flags
+    // bypass state: 9-bit mask (bits 0-6 ride BYPASS_LOW, bits 7-8 ride BYPASS_HIGH)
+    int bypassMask = 0;
     bool bypassHPF = false;
     bool bypassPitch = false;
     bool bypassFormant = false;
     bool bypassDist = false;
     bool bypassBitcrush = false;
     bool bypassAM = false;
+    bool bypassGranular = false;
+    bool bypassDelay = false;
+    bool bypassReverb = false;
 
     Biquad hpf;
     Biquad formant;
@@ -32,11 +40,15 @@ struct Channel {
     BitCrusher crush;
     Shifter shifter;
     Envelope env;
+    Granular granular;
+    Delay delay;
+    Reverb reverb;
 
     Channel() {
         hpf.setHP(hpfFreq);
         formant.setLP(lpFreq, lpRes);
         env.setSampleRate(sampleRate);
+        delay.setSampleRate(sampleRate);
     }
 
     // Process one input sample, return the processed output.
@@ -69,6 +81,11 @@ struct Channel {
         // AM (envelope modulates amplitude)
         if (!bypassAM) x *= (1.0 - amDepth * (1.0 - e));
 
+        // space FX: granular -> delay -> reverb (each owns its dry/wet mix)
+        if (!bypassGranular) x = granular.process(x);
+        if (!bypassDelay) x = delay.process(x);
+        if (!bypassReverb) x = reverb.process(x);
+
         return x;
     }
 
@@ -79,18 +96,35 @@ struct Channel {
         hpf.setHP(hpfFreq);
         formant.setLP(lpFreq, lpRes);
         env.setSampleRate(sr);
+        delay.setSampleRate(sr);
     }
 
     void setBypassMask(int mask) {
-        bypassHPF = (mask & midimap::BYPASS_HPF) != 0;
-        bypassPitch = (mask & midimap::BYPASS_PITCH) != 0;
-        bypassFormant = (mask & midimap::BYPASS_FORMANT) != 0;
-        bypassDist = (mask & midimap::BYPASS_DIST) != 0;
-        bypassBitcrush = (mask & midimap::BYPASS_BITCRUSH) != 0;
-        bypassAM = (mask & midimap::BYPASS_AM) != 0;
+        bypassMask = mask & 0x1FF;
+        bypassHPF = (bypassMask & midimap::BYPASS_HPF) != 0;
+        bypassPitch = (bypassMask & midimap::BYPASS_PITCH) != 0;
+        bypassFormant = (bypassMask & midimap::BYPASS_FORMANT) != 0;
+        bypassDist = (bypassMask & midimap::BYPASS_DIST) != 0;
+        bypassBitcrush = (bypassMask & midimap::BYPASS_BITCRUSH) != 0;
+        bypassAM = (bypassMask & midimap::BYPASS_AM) != 0;
+        bypassGranular = (bypassMask & midimap::BYPASS_GRANULAR) != 0;
+        bypassDelay = (bypassMask & midimap::BYPASS_DELAY) != 0;
+        bypassReverb = (bypassMask & midimap::BYPASS_REVERB) != 0;
+    }
+
+    // MIDI: the 9-bit mask rides two 7-bit CCs (low = bits 0-6, high = bits 7-8)
+    void setBypassLow(int v) { setBypassMask((bypassMask & 0x180) | (v & 0x7F)); }
+    void setBypassHigh(int v) { setBypassMask((bypassMask & 0x07F) | ((v & 0x03) << 7)); }
+
+    // Defaults: all FX bypassed except channel 0's formant (the default voice).
+    void setDefaults(int idx) {
+        int mask = midimap::ALL_BYPASS;
+        if (idx == 0) mask &= ~midimap::BYPASS_FORMANT;
+        setBypassMask(mask);
     }
 
     void reset() {
         hpf.reset(); formant.reset(); shifter.reset(); env.reset();
+        granular.reset(); delay.reset(); reverb.reset();
     }
 };

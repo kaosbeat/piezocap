@@ -14,8 +14,11 @@ reordering.
 Fixed per-channel slot order (cheap, deterministic CPU):
 ```
 gain → HPF → envelope → pitch/formant → distortion → bitcrusher → AM
+     → granular → delay → reverb
 ```
-Each slot has a **bypass CC** (bit mask on the per-channel bypass CC).
+The space FX (granular/delay/reverb) sit after AM; each owns a dry/wet mix and
+a **bypass** bit (9-bit mask split across the two per-channel bypass CCs,
+offsets 13/14: 7 low bits + 2 high bits).
 
 ## Consequences
 - Deterministic CPU cost per channel; easy to reason about at 8–10 channels.
