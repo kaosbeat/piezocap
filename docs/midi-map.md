@@ -48,6 +48,10 @@ Global:
 | 121 | sustain (hold the growl) |
 | 122 | growl depth (overall amount, drives AM) |
 | 123 | active channels (1–8; inactive channels skip DSP and output 0) |
+| 124 | envelope follower attack (global, 0.5–50 ms) |
+| 125 | envelope follower release (global, 10–500 ms) |
+| 126 | mod-matrix cell register (0–71; cell = `effect*8 + channel`) |
+| 127 | mod-matrix amount (0–127; writes the depth of the registered cell) |
 
 ## Outbound (Bela → DAW)
 
@@ -66,5 +70,13 @@ Per channel `i` (0–7, active channels only):
   a 7-bit low CC (bits 0–6) and a 2-bit high CC (bits 7–8).
 - Granular pitch, HPF frequency, and AM depth are not CC-mapped (fixed
   defaults; AM depth is driven globally by growl depth).
+- The 15-CC channel block is full, so the envelope-follower attack/release
+  times (per-channel in the DSP) are exposed as **global** CCs 124/125: one
+  control sets every channel's follower. This keeps the per-channel map
+  unchanged and the global block (120-127) collision-free.
 - Outbound CCs 100–107 and notes 60–67 ride the USB-C device port; the numeric
   overlap with the inbound 100–119 range is harmless (separate ports).
+- The mod matrix (9 effects × 8 channels = 72 cells) uses a two-CC register
+  protocol: CC 126 selects the cell (`effect*8 + channel`), CC 127 writes that
+  cell's amount (the depth by which the channel's envelope drives the effect on
+  itself). The DAW keeps the register pointer; only the amount changes per cell.

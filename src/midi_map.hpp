@@ -46,6 +46,9 @@ constexpr int CC_MASTER_VOLUME    = 120;
 constexpr int CC_SUSTAIN          = 121;
 constexpr int CC_GROWL_DEPTH      = 122;
 constexpr int CC_ACTIVE_CHANNELS  = 123; // 1-8, how many channels are live
+// Envelope-follower response (global: sets every channel's follower).
+constexpr int CC_ENV_ATTACK       = 124; // follower attack time (0.5-50 ms)
+constexpr int CC_ENV_RELEASE      = 125; // follower release time (10-500 ms)
 
 // Outbound (Bela -> DAW, over the USB-C device port)
 constexpr int CC_OUT_ENVELOPE(int i) { return 100 + i; }
@@ -54,5 +57,14 @@ constexpr int NOTE_GATE(int i) { return 60 + i; }
 // Number of channels (max) and the default active count.
 constexpr int NUM_CHANNELS         = 8;
 constexpr int DEFAULT_NUM_CHANNELS = 4;
+
+// Mod matrix (register protocol): CC 126 selects a cell (0-71), CC 127 its
+// amount. Cell = effect*8 + channel (effect 0-8, channel 0-7). A cell holds the
+// depth (0..1) by which that channel's envelope drives that effect's primary
+// param on the same channel. See docs/midi-map.md.
+constexpr int NUM_EFFECTS     = 9;   // HPF, Pitch, Formant, Dist, Crush, AM, Delay, Reverb, Granular
+constexpr int CC_MOD_CELL     = 126; // cell register (0-71)
+constexpr int CC_MOD_AMOUNT   = 127; // amount for the selected cell (0-127)
+constexpr int modCellIndex(int effect, int channel) { return effect * NUM_CHANNELS + channel; }
 
 } // namespace midimap

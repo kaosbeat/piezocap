@@ -36,6 +36,12 @@ static double sustain = 0.0;     // 0/1, holds the growl
 static double growlDepth = 0.7;  // overall growl amount (drives AM depth)
 static int activeChannels = midimap::DEFAULT_NUM_CHANNELS; // 1..NUM_CHANNELS
 
+// Mod matrix: 9 effects x 8 channels. modMatrix[e][c] = depth (0..1) by which
+// channel c's envelope drives effect e's primary param on that channel. Set via
+// the register protocol: CC 126 selects the cell (0-71), CC 127 its amount.
+static double modMatrix[midimap::NUM_EFFECTS][midimap::NUM_CHANNELS] = {};
+static int modCell = 0; // current cell register (0-71)
+
 // MIDI note-gate state per channel (to avoid re-sending note-on every frame)
 static int lastGate[midimap::NUM_CHANNELS];
 
@@ -44,7 +50,7 @@ void onMidiCC(int cc, int value); // inbound CC handler, defined below
 // MIDI (Bela): in = controller on the USB-A host port, out = host over the
 // USB-C device port (the virtual MIDI device the DAW/sniffer reads).
 Midi midi;
-const char *gMidiInPort  = "hw:1,0,0"; // USB-A host: controller -> Bela
+const char *gMidiInPort  = "hw:0,0,0"; // USB-C device: controller -> Bela
 const char *gMidiOutPort = "hw:0,0,0"; // USB-C device: Bela -> host (DAW)
 
 // MIDI in callback — runs on the MIDI input thread, not the RT thread.
@@ -100,6 +106,8 @@ void render(BelaContext *context, void *userData) {
 
                 // ---- process ---------------------------------------------------
                 channels[i].amDepth = growlDepth; // global growl amount drives AM depth
+                for (int e = 0; e < midimap::NUM_EFFECTS; e++)
+                    channels[i].modDepth[e] = modMatrix[e][i]; // per-channel mod depths
                 double out = channels[i].process(input);
 
                 // ---- master mix (stereo) ---------------------------------------
@@ -166,6 +174,35 @@ void onMidiCC(int cc, int value) {
         activeChannels = value < 1 ? 1 : (value > midimap::NUM_CHANNELS ? midimap::NUM_CHANNELS : value);
         return;
     }
+    // Envelope-follower response (global): recompute the smoothing coefficients
+    // for every channel so the change takes effect immediately.
+    if (cc == midimap::CC_ENV_ATTACK) {
+        double t = 0.0005 + (value / 127.0) * 0.0495; // 0.5 ms .. 50 ms
+        for (int i = 0; i < midimap::NUM_CHANNELS; i++) {
+            channels[i].env.attack = t;
+            channels[i].env.setSampleRate(channels[i].sampleRate);
+        }
+        return;
+    }
+    if (cc == midimap::CC_ENV_RELEASE) {
+        double t = 0.01 + (value / 127.0) * 0.49; // 10 ms .. 500 ms
+        for (int i = 0; i < midimap::NUM_CHANNELS; i++) {
+            channels[i].env.release = t;
+            channels[i].env.setSampleRate(channels[i].sampleRate);
+        }
+        return;
+    }
+    // Mod matrix (register protocol): CC 126 selects the cell (0-71), CC 127 its
+    // amount. Cell = effect*8 + channel. The render loop copies modMatrix into
+    // each channel's modDepth, which process() applies per-sample.
+    if (cc == midimap::CC_MOD_CELL) {
+        modCell = value < 0 ? 0 : (value > 71 ? 71 : value);
+        return;
+    }
+    if (cc == midimap::CC_MOD_AMOUNT) {
+        modMatrix[modCell / midimap::NUM_CHANNELS][modCell % midimap::NUM_CHANNELS] = value / 127.0;
+        return;
+    }
 
     // Per-channel CCs: base = 15*i, offsets 0-14 (ch0 0-14 ... ch7 105-119)
     if (cc >= midimap::channelBase(midimap::NUM_CHANNELS)) return;
@@ -182,21 +219,20 @@ void onMidiCC(int cc, int value) {
             channels[i].formant.setLP(channels[i].lpFreq, channels[i].lpRes);
             break;
         case midimap::CC_PITCH_DEPTH:
-            channels[i].shifter.ratio = 1.0 - (value / 127.0) * 0.5; // 1.0..0.5 (down)
+            channels[i].basePitchRatio = 1.0 - (value / 127.0) * 0.5; // 1.0..0.5 (down)
             break;
-        case midimap::CC_DIST_DRIVE: channels[i].dist.drive = 1.0 + (value / 127.0) * 10.0; break;
+        case midimap::CC_DIST_DRIVE: channels[i].baseDistDrive = 1.0 + (value / 127.0) * 10.0; break;
         case midimap::CC_BITCRUSH:
-            channels[i].crush.setBits(16.0 - (value / 127.0) * 12.0); // 16..4 bits
+            channels[i].baseCrushBits = 16.0 - (value / 127.0) * 12.0; // 16..4 bits
             break;
         case midimap::CC_GRANULAR_DENSITY:
-            channels[i].granular.density = value / 127.0;
+            channels[i].baseGranDensity = value / 127.0;
             break;
         case midimap::CC_GRANULAR_SIZE:
             channels[i].granular.size = value / 127.0;
             break;
         case midimap::CC_DELAY_TIME:
-            channels[i].delay.time = 0.005 + (value / 127.0) * 0.5; // 5 ms..505 ms
-            channels[i].delay.recomputeOffset();
+            channels[i].baseDelayTime = 0.005 + (value / 127.0) * 0.5; // 5 ms..505 ms
             break;
         case midimap::CC_DELAY_FEEDBACK:
             channels[i].delay.fb = value / 127.0;
@@ -205,7 +241,7 @@ void onMidiCC(int cc, int value) {
             channels[i].delay.mix = value / 127.0;
             break;
         case midimap::CC_REVERB_DECAY:
-            channels[i].reverb.krt = 0.35 + (value / 127.0) * 0.63; // 0.35..0.98
+            channels[i].baseReverbKrt = 0.35 + (value / 127.0) * 0.63; // 0.35..0.98
             break;
         case midimap::CC_REVERB_WET:
             channels[i].reverb.amount = value / 127.0;
